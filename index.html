@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPIC Speaking Lab</title>
+<style>
+body{margin:0;background:#fff7ef;font-family:Arial,sans-serif;color:#231f20}
+.app{max-width:760px;margin:auto;padding:18px 15px 95px}
+h1{font-size:22px;color:#3d2a20;margin-bottom:6px}
+.info{color:#74675f;font-size:14px;line-height:1.5}
+.topicTabs{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}
+.topicTabs button{padding:10px 4px;font-size:13px;border-radius:13px}
+.activeTopic{background:#7b4a2f!important;color:white!important}
+.card{background:#fffdf9;border:1px solid #ead8c9;border-radius:22px;padding:18px;box-shadow:0 8px 25px #0001}
+select,button,textarea{font:inherit}
+select{width:100%;padding:13px;border-radius:14px;border:1px solid #ead8c9;margin-bottom:12px}
+.korean{font-size:20px;line-height:1.45;font-weight:700;background:#f7eadf;padding:14px;border-radius:16px;margin:14px 0}
+.english{font-size:24px;line-height:1.35;font-weight:800;margin:18px 0;padding:16px;border-radius:16px;background:#fff;cursor:pointer;border:1px dashed #d8bfa9}
+.hiddenText{color:transparent;text-shadow:0 0 10px #b9a99b;background:#f3e4d6}
+.progress{height:10px;background:#eee0d4;border-radius:999px;overflow:hidden}
+.bar{height:100%;background:#7b4a2f;width:0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+button{border:0;border-radius:16px;padding:14px;font-weight:800;background:#efe3d8;color:#3c2a21}
+.primary{background:#7b4a2f;color:white}
+.green{background:#2f6f55;color:white}
+.red{background:#a83d32;color:white}
+button:disabled{opacity:.45}
+textarea{width:100%;min-height:80px;border:1px solid #ead8c9;border-radius:14px;padding:12px}
+.bottom{position:fixed;bottom:0;left:0;right:0;background:#fff7eff0;border-top:1px solid #ead8c9;padding:10px}
+.bottom div{max-width:760px;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+</style>
+</head>
+
+<body>
+<div class="app">
+<h1>🎤 OPIC Speaking Lab</h1>
+<p class="info">주제를 선택하고, 한국어만 보고 영어로 말해보세요. 영어 문장은 터치하면 숨김/보임이 바뀝니다.</p>
+
+<div class="topicTabs" id="topicTabs"></div>
+
+<select id="sectionSelect"></select>
+
+<div class="card">
+  <p class="info"><b id="topicTitle"></b></p>
+  <p class="info"><span id="sectionName"></span> · <b id="counter"></b></p>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+
+  <div class="korean" id="korean"></div>
+  <div class="english" id="english" onclick="toggleEnglish()"></div>
+  <p class="info">👆 영어 문장을 터치하면 가려지고, 다시 터치하면 보입니다.</p>
+
+  <div class="grid">
+    <button class="primary" onclick="speakCurrent()">🔊 듣기</button>
+    <button onclick="repeat3()">🔁 3회 듣기</button>
+    <button class="green" id="recBtn" onclick="startRecording()">● 녹음 시작</button>
+    <button class="red" id="stopBtn" onclick="stopRecording()" disabled>■ 녹음 중지</button>
+    <button id="playBtn" onclick="playRecording()" disabled>▶ 내 목소리</button>
+    <button onclick="toggleDone()">✓ 완료 체크</button>
+  </div>
+
+  <p id="status" class="info"></p>
+
+  <label class="info">음성 속도</label>
+  <input id="rate" type="range" min="0.6" max="1.2" step="0.05" value="0.85" style="width:100%">
+
+  <h3>내 발음 메모</h3>
+  <textarea id="memo" placeholder="강세, 끊어 읽기, 어려운 발음 메모"></textarea>
+</div>
+
+<p class="info">※ GitHub Pages의 https:// 주소에서 열어야 마이크 녹음이 정상 작동합니다.</p>
+</div>
+
+<div class="bottom">
+  <div>
+    <button onclick="prevSentence()">← 이전</button>
+    <button class="primary" onclick="nextSentence()">다음 →</button>
+  </div>
+</div>
+
+<script>
+const TOPICS = [
+{
+title:"Topic 1: AI & Social Media",
+data:[
+{section:"Introduction",ko:"솔직히 말해서, 저는 요즘 디지털 크리에이터로서 여러 역할을 동시에 하고 있습니다.",en:"To be honest, I’ve been wearing many hats lately as a digital creator."},
+{section:"Introduction",ko:"저는 제 창작물을 위한 인스타그램 계정을 운영하며, 웹툰과 소설부터 짧은 애니메이션까지 다양한 콘텐츠를 공유합니다.",en:"I run an Instagram account dedicated to my creative works, where I share everything from webtoons and novels to short animations."},
+{section:"Introduction",ko:"AI 시대에, 창작자를 진정으로 차별화하는 것은 그 사람만의 삶의 이야기와 개인적인 경험이라는 것을 깨달았습니다.",en:"In this era of AI, I’ve realized that what truly sets a creator apart is their unique life story and personal experiences."},
+{section:"Introduction",ko:"그래서 저는 제 여정을 기록하기 시작했습니다. 단순한 취미가 아니라 평생의 사명처럼 말입니다.",en:"That’s why I’ve started documenting my journey—not just as a hobby, but as a lifelong mission."},
+{section:"Main Body 1",ko:"AI가 계속 발전하고 생성 콘텐츠가 시장에 넘쳐날수록, 인간적인 손길과 진정성의 가치는 더욱 높아질 것이라고 믿습니다.",en:"I strongly believe that as AI continues to evolve and flood the market with generated content, the value of human touch and authenticity will skyrocket."},
+{section:"Main Body 1",ko:"누구나 프롬프트로 이미지나 이야기를 만들 수 있지만, 제 과거와 감정, 인생에서 배운 교훈은 아무도 똑같이 복제할 수 없습니다.",en:"Anyone can generate an image or a story with a prompt, but no one can replicate my specific past, my emotions, or the lessons I’ve learned throughout my life."},
+{section:"Main Body 1",ko:"제 개인사를 웹툰과 글에 녹여내면서, 저는 저만의 고유한 브랜드를 만들고 있습니다.",en:"By blending my personal history into my webtoons and writing, I’m creating a brand that is uniquely mine, which I think is more important now than ever before."},
+{section:"Main Body 2",ko:"흥미로운 점은, 저는 이것을 단기 프로젝트로 보지 않는다는 것입니다.",en:"What’s exciting is that I don’t see this as a short-term project."},
+{section:"Main Body 2",ko:"저는 이 창작 활동을 아주 오랫동안 지속하고 싶습니다.",en:"I plan to sustain this creative career for a very long time."},
+{section:"Main Body 2",ko:"제 목표는 제 삶의 흔적을 디지털 아카이브로 남기는 것입니다. 말하자면 하나의 유산 같은 것이죠.",en:"My goal is to build a digital archive of my existence—a legacy, if you will."},
+{section:"Main Body 2",ko:"2D 애니메이션이든, 소셜 미디어에 연재하는 소설이든, 저는 계속해서 제가 누구인지의 본질을 담아내고 싶습니다.",en:"Whether it’s through a 2D animation or a serialized novel on social media, I want to keep capturing the essence of who I am."},
+{section:"Main Body 2",ko:"이러한 지속적인 창작 과정은 저에게 동기를 주고, 빠르게 변하는 세상 속에서 삶의 목적의식을 줍니다.",en:"This process of constant creation keeps me motivated and gives me a sense of purpose in this rapidly changing world."},
+{section:"Conclusion",ko:"간단히 말해, 제 소셜 미디어는 단순한 갤러리가 아닙니다. 그것은 제 삶의 살아 있는 기록입니다.",en:"So, in a nutshell, my social media presence isn't just a gallery; it’s a living record of my life."},
+{section:"Conclusion",ko:"저는 이야기꾼으로서의 뿌리를 잃지 않으면서 기술과 함께 계속 성장해 나가고 싶습니다.",en:"I’m committed to evolving alongside technology while staying true to my roots as a storyteller."},
+{section:"Conclusion",ko:"이 길이 저를 예술가로 성장시킬 뿐만 아니라, 사람들과 더 깊고 인간적인 차원에서 연결되게 해줄 것이라고 확신합니다.",en:"I’m confident that this path will not only help me grow as an artist but also allow me to connect with others on a much deeper, more human level."}
+]
+},
+
+{
+title:"Topic 2: Difficulties in My Job",
+data:[
+{section:"Question",ko:"질문: 당신의 직업에서 어떤 어려움을 겪나요?",en:"What difficulties do you face in your job?"},
+{section:"Opening",ko:"제 직업에서 가장 큰 어려움 중 하나는 제가 동시에 여러 역할을 해야 한다는 점입니다.",en:"One of the biggest challenges in my job is that I wear many hats at the same time."},
+{section:"My Job",ko:"저는 집에서 작은 영어 공부방을 운영하고 있습니다. 그래서 저는 단순히 선생님만이 아니라 사업 운영자, 관리자, 때로는 상담자 역할도 해야 합니다.",en:"I run a small English academy from my home, so I'm not only a teacher but also a business owner, administrator, and sometimes even a counselor."},
+{section:"Business Challenges",ko:"사업 운영자로서 저는 여러 가지 문제를 다뤄야 합니다.",en:"As a business owner, I have to deal with various issues."},
+{section:"Business Challenges",ko:"예를 들어 학생들이 갑자기 그만두기도 하고, 일정이 갑자기 바뀌기도 하며, 때로는 학부모님들과 소통하며 걱정이나 오해를 조정해야 할 때도 있습니다.",en:"For example, students occasionally leave the academy, schedules change unexpectedly, and sometimes I need to communicate with parents to resolve concerns or misunderstandings."},
+{section:"Mental Management",ko:"혼자 일하기 때문에 제 멘탈 관리도 잘해야 합니다.",en:"Since I work alone, I also have to take good care of my mental health."},
+{section:"Professional Growth",ko:"제 공부방의 성과는 거의 제 개인적인 노력에 달려 있기 때문에, 저는 계속 공부하고 수업 방식을 개선하며 새로운 학습 자료를 개발해야 합니다.",en:"The success of my academy depends largely on my own effort, so I constantly need to study, improve my teaching methods, and develop new learning materials."},
+{section:"Hardest Part",ko:"하지만 제 직업에서 가장 어려운 부분은 사실 영어를 가르치는 것이 아닙니다.",en:"However, the most difficult part of my job is not teaching English."},
+{section:"Student Counseling",ko:"때때로 학생들이 가정 문제, 정체성에 관한 고민, 친구 관계의 갈등, 또는 감정적인 어려움 같은 개인적인 문제를 저에게 털어놓을 때가 있습니다.",en:"Sometimes students come to me with personal problems, such as family issues, identity-related concerns, friendship conflicts, or emotional struggles."},
+{section:"Pressure",ko:"그럴 때 저는 솔직히 큰 부담을 느낍니다. 제 말이 학생에게 영향을 줄 수 있다는 것을 알기 때문입니다.",en:"When that happens, I honestly feel a lot of pressure because I know that my words can have an impact on them."},
+{section:"Boundaries",ko:"저는 학생들을 도와주고 싶지만, 동시에 그들의 개인적인 삶이나 가정사에 너무 깊이 개입하지 않으려고 노력합니다.",en:"I want to support my students, but at the same time, I try not to interfere too much in their personal lives or family matters."},
+{section:"Core Message",ko:"학생을 지지해 주는 것과 적절한 선을 지키는 것 사이에서 균형을 찾는 일이 아마 제 직업에서 가장 어려운 부분일 것입니다.",en:"Finding the right balance between being supportive and respecting boundaries is probably the hardest part of my job."},
+{section:"Conclusion",ko:"이런 어려움에도 불구하고, 저는 이러한 경험들이 저를 더 신중한 선생님이자 더 이해심 있는 사람으로 만들어 주었다고 믿습니다.",en:"Despite these challenges, I believe they have helped me become a more thoughtful teacher and a more understanding person."}
+]
+},
+
+{title:"Topic 3: Empty Slot",data:[{section:"Empty",ko:"아직 주제가 입력되지 않았습니다.",en:"This topic slot is empty. You can add a new OPIC script here later."}]},
+{title:"Topic 4: Empty Slot",data:[{section:"Empty",ko:"아직 주제가 입력되지 않았습니다.",en:"This topic slot is empty. You can add a new OPIC script here later."}]},
+{title:"Topic 5: Empty Slot",data:[{section:"Empty",ko:"아직 주제가 입력되지 않았습니다.",en:"This topic slot is empty. You can add a new OPIC script here later."}]},
+{title:"Topic 6: Empty Slot",data:[{section:"Empty",ko:"아직 주제가 입력되지 않았습니다.",en:"This topic slot is empty. You can add a new OPIC script here later."}]},
+{title:"Topic 7: Empty Slot",data:[{section:"Empty",ko:"아직 주제가 입력되지 않았습니다.",en:"This topic slot is empty. You can add a new OPIC script here later."}]},
+{title:"Topic 8: Empty Slot",data:[{section:"Empty",ko:"아직 주제가 입력되지 않았습니다.",en:"This topic slot is empty. You can add a new OPIC script here later."}]},
+{title:"Topic 9: Empty Slot",data:[{section:"Empty",ko:"아직 주제가 입력되지 않았습니다.",en:"This topic slot is empty. You can add a new OPIC script here later."}]},
+{title:"Topic 10: Empty Slot",data:[{section:"Empty",ko:"아직 주제가 입력되지 않았습니다.",en:"This topic slot is empty. You can add a new OPIC script here later."}]}
+];
+
+let topicIndex=Number(localStorage.getItem("topicIndex")||0);
+let idx=Number(localStorage.getItem("multi_idx_"+topicIndex)||0);
+let section="All";
+let filtered=[];
+let englishHidden=false;
+let recorder,chunks=[],audioURLs={};
+let done=JSON.parse(localStorage.getItem("multi_done")||"{}");
+
+const $=id=>document.getElementById(id);
+
+function init(){
+  renderTopicTabs();
+  loadTopic();
+}
+
+function renderTopicTabs(){
+  $("topicTabs").innerHTML=TOPICS.map((t,i)=>
+    `<button onclick="changeTopic(${i})" class="${i===topicIndex?'activeTopic':''}">주제 ${i+1}</button>`
+  ).join("");
+}
+
+function changeTopic(i){
+  topicIndex=i;
+  localStorage.setItem("topicIndex",topicIndex);
+  idx=Number(localStorage.getItem("multi_idx_"+topicIndex)||0);
+  section="All";
+  englishHidden=false;
+  speechSynthesis.cancel();
+  loadTopic();
+}
+
+function loadTopic(){
+  const data=TOPICS[topicIndex].data;
+  const sections=["All",...new Set(data.map(x=>x.section))];
+  $("sectionSelect").innerHTML=sections.map(s=>`<option>${s}</option>`).join("");
+  $("sectionSelect").value="All";
+  $("sectionSelect").onchange=()=>{
+    section=$("sectionSelect").value;
+    idx=0;
+    englishHidden=false;
+    applyFilter();
+  };
+  applyFilter();
+  renderTopicTabs();
+}
+
+function applyFilter(){
+  const data=TOPICS[topicIndex].data;
+  filtered=section==="All"?data:data.filter(x=>x.section===section);
+  if(idx>=filtered.length)idx=0;
+  render();
+}
+
+function current(){return filtered[idx];}
+function globalKey(){return `t${topicIndex}_${current().en}`;}
+
+function render(){
+  const cur=current();
+  $("topicTitle").textContent=TOPICS[topicIndex].title;
+  $("korean").textContent=cur.ko;
+  $("english").textContent=cur.en;
+  $("english").classList.toggle("hiddenText",englishHidden);
+  $("sectionName").textContent=cur.section;
+  $("counter").textContent=`${idx+1} / ${filtered.length}`;
+  $("bar").style.width=((idx+1)/filtered.length*100)+"%";
+  $("memo").value=localStorage.getItem("memo_"+globalKey())||"";
+  $("playBtn").disabled=!audioURLs[globalKey()];
+  localStorage.setItem("multi_idx_"+topicIndex,idx);
+  $("memo").oninput=()=>localStorage.setItem("memo_"+globalKey(),$("memo").value);
+}
+
+function toggleEnglish(){
+  englishHidden=!englishHidden;
+  render();
+}
+
+function speakCurrent(){
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(current().en);
+  u.lang="en-US";
+  u.rate=Number($("rate").value);
+  speechSynthesis.speak(u);
+}
+
+function repeat3(){
+  let n=0;
+  function loop(){
+    if(n>=3){$("status").textContent="3회 듣기 완료";return;}
+    $("status").textContent=`듣는 중 ${n+1}/3`;
+    const u=new SpeechSynthesisUtterance(current().en);
+    u.lang="en-US";
+    u.rate=Number($("rate").value);
+    u.onend=()=>{n++;setTimeout(loop,700);}
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }
+  loop();
+}
+
+async function startRecording(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    recorder=new MediaRecorder(stream);
+    chunks=[];
+    recorder.ondataavailable=e=>chunks.push(e.data);
+    recorder.onstop=()=>{
+      const blob=new Blob(chunks,{type:"audio/webm"});
+      audioURLs[globalKey()]=URL.createObjectURL(blob);
+      $("playBtn").disabled=false;
+      $("status").textContent="녹음 완료. 내 목소리를 들어보세요.";
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    recorder.start();
+    $("recBtn").disabled=true;
+    $("stopBtn").disabled=false;
+    $("status").textContent="녹음 중...";
+  }catch(e){
+    alert("마이크 권한을 허용해 주세요. https:// 주소에서 실행해야 합니다.");
+  }
+}
+
+function stopRecording(){
+  if(recorder&&recorder.state!=="inactive")recorder.stop();
+  $("recBtn").disabled=false;
+  $("stopBtn").disabled=true;
+}
+
+function playRecording(){
+  const url=audioURLs[globalKey()];
+  if(url)new Audio(url).play();
+}
+
+function toggleDone(){
+  const key=globalKey();
+  done[key]=!done[key];
+  localStorage.setItem("multi_done",JSON.stringify(done));
+  $("status").textContent=done[key]?"완료 체크됨":"완료 체크 해제";
+}
+
+function prevSentence(){
+  if(idx>0){idx--;englishHidden=false;render();}
+}
+
+function nextSentence(){
+  if(idx<filtered.length-1){idx++;englishHidden=false;render();}
+}
+
+init();
+</script>
+</body>
+</html>
